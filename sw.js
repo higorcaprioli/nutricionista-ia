@@ -1,8 +1,8 @@
 // Cache do app para abrir offline. Chamadas à API nunca são cacheadas.
-const CACHE = "nutri-v1";
+const CACHE = "nutri-v2";
 const ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.webmanifest",
-  "./js/app.js", "./js/store.js", "./js/calc.js", "./js/data.js", "./js/ai.js",
+  "./js/app.js", "./js/store.js", "./js/calc.js", "./js/data.js", "./js/ai.js", "./js/auth.js",
   "./icons/icon-192.png", "./icons/icon-512.png",
 ];
 

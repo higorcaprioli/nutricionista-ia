@@ -245,6 +245,24 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .total { font-size: 15px; margin-top: 8px; }
 .after { font-size: 14px; margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--soft); }
 
+/* login */
+body.locked { overflow: hidden; }
+body.locked .top, body.locked .nav, body.locked main { visibility: hidden; }
+.login {
+  position: fixed; inset: 0; z-index: 40; background: var(--bg);
+  display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; justify-items: center; overflow: auto;
+  padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+}
+.login-box { width: 100%; max-width: 380px; text-align: center; display: grid; gap: 10px; }
+.login-box h1 { font-size: 24px; }
+.login-box .form { text-align: left; }
+.login-logo { width: 84px; height: 84px; border-radius: 22px; margin: 0 auto 4px; }
+.login-err { color: var(--bad); font-size: 14px; min-height: 1.2em; }
+.check { display: flex !important; align-items: center; gap: 10px; color: var(--text) !important; font-size: 15px !important; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.link { background: none; border: 0; color: var(--muted); font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; padding: 8px; }
+.account p { font-size: 14px; }
+
 /* navegação inferior */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;

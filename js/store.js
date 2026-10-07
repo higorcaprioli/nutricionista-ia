@@ -27,6 +27,7 @@ const DEFAULTS = {
   days: {},      // "YYYY-MM-DD": {foods:[], workouts:[], water:0, steps:0}
   fasts: [],     // {id, start, end, targetH}
   kcalAdjustments: [], // {date, delta, reason}
+  auth: null,    // {name, salt, hash, credId} — ver auth.js
   onboarded: false,
 };
 
@@ -64,8 +65,13 @@ export function save() {
 export function update(fn) { fn(state); save(); }
 export function subscribe(fn) { listeners.add(fn); }
 
+// Restaura um backup mantendo o login e a chave da API deste aparelho.
 export function replaceAll(data) {
+  const { auth } = state;
+  const { apiKey } = state.settings;
   state = { ...structuredClone(DEFAULTS), ...data, profile: { ...DEFAULTS.profile, ...data.profile }, settings: { ...DEFAULTS.settings, ...data.settings } };
+  state.auth = auth;
+  if (!state.settings.apiKey) state.settings.apiKey = apiKey;
   save();
 }
 

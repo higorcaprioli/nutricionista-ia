@@ -1,5 +1,6 @@
 import * as store from "./store.js";
 import * as calc from "./calc.js";
+import * as auth from "./auth.js";
 import { MEALS, PROTOCOL_NOTES, WORKOUT_PLAN, ACTIVITIES, FAST_PHASES } from "./data.js";
 
 // ---------- utilidades ----------
@@ -70,6 +71,7 @@ function go(id) {
 }
 
 function render() {
+  if (!auth.isUnlocked()) return; // nada aparece por trás da tela de login
   renderNav();
   clearInterval(tickTimer);
   const d = new Date();
@@ -798,7 +800,9 @@ function settingsModal(first = false) {
       </select></label>
       <div class="row-end"><button class="btn" type="submit">Salvar</button></div>
     </form>
-    ${first ? "" : `<h3>Backup</h3>
+    ${first ? "" : `<h3>Conta</h3>
+    <div id="account" class="account"></div>
+    <h3>Backup</h3>
     <p class="muted small">Os dados ficam no navegador. Exporte de vez em quando para não perder.</p>
     <div class="row-center">
       <button class="btn ghost" data-act="export">⬇ Exportar</button>
@@ -827,6 +831,7 @@ function settingsModal(first = false) {
     closeModal();
     toast("Ajustes salvos");
   });
+  if (!first) renderAccount();
   $("#import")?.addEventListener("change", async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
@@ -840,9 +845,54 @@ function settingsModal(first = false) {
   });
 }
 
+async function renderAccount() {
+  const box = $("#account");
+  const a = store.get().auth || {};
+  const bio = await auth.biometricAvailable();
+  box.innerHTML = `<p>Conectado como <b>${esc(a.name || "–")}</b>. O app pede a senha ao abrir e após 5 min em segundo plano.</p>
+    <div class="row-center">
+      <button class="btn ghost" data-act="change-pw">🔑 Alterar senha</button>
+      ${bio ? `<button class="btn ghost" data-act="toggle-bio">${a.credId ? "Desativar digital" : "👆 Ativar digital"}</button>` : ""}
+      <button class="btn ghost" data-act="lock">🔒 Sair</button>
+    </div>`;
+}
+
+function changePasswordModal() {
+  openModal(`<h2>Alterar senha</h2>
+    <form id="pw-form" class="form">
+      <label>Senha atual<input name="cur" type="password" autocomplete="current-password" required></label>
+      <label>Nova senha (mín. 4)<input name="pw" type="password" autocomplete="new-password" minlength="4" required></label>
+      <label>Confirme a nova senha<input name="pw2" type="password" autocomplete="new-password" minlength="4" required></label>
+      <div class="login-err" id="pw-err"></div>
+      <div class="row-end"><button type="button" class="btn ghost" data-act="close">Cancelar</button><button class="btn" type="submit">Salvar</button></div>
+    </form>`);
+  $("#pw-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const f = Object.fromEntries(new FormData(ev.target));
+    const err = $("#pw-err");
+    if (!(await auth.checkPassword(f.cur))) { err.textContent = "Senha atual incorreta."; return; }
+    if (f.pw !== f.pw2) { err.textContent = "As senhas novas não conferem."; return; }
+    await auth.setPassword(f.pw);
+    closeModal();
+    toast("Senha alterada");
+  });
+}
+
+function boot() {
+  if (!auth.isUnlocked()) {
+    closeModal();
+    $("#view").innerHTML = "";
+    auth.showLogin(boot);
+    return;
+  }
+  render();
+  if (!store.get().onboarded) settingsModal(true);
+}
+
 function exportData() {
   const data = structuredClone(store.get());
   data.settings.apiKey = ""; // nunca exporta a chave
+  delete data.auth;          // nem a senha: o backup pode ser restaurado em outro aparelho
   const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -897,6 +947,15 @@ const actions = {
   settings: () => settingsModal(false),
   export: exportData,
   install: async () => { if (installEvt) { installEvt.prompt(); installEvt = null; closeModal(); } },
+  "change-pw": changePasswordModal,
+  "toggle-bio": async () => {
+    try {
+      if (store.get().auth?.credId) { auth.disableBiometric(); toast("Digital desativada"); }
+      else { await auth.enableBiometric(); toast("Digital ativada"); }
+    } catch { toast("Não foi possível ativar a digital"); }
+    renderAccount();
+  },
+  lock: () => { auth.lock(); boot(); },
 };
 
 document.addEventListener("click", (ev) => {
@@ -920,7 +979,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) rend
 store.subscribe(() => render());
 store.pruneThumbs();
 if (!TABS.some((t) => t.id === tab)) tab = "hoje";
-render();
-if (!store.get().onboarded) settingsModal(true);
+auth.watchBackground(boot);
+boot();
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
